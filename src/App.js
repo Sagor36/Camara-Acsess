@@ -78,7 +78,7 @@ function App() {
     let interval;
     if (hasPermission) {
       // ক্যামেরা স্টার্ট হওয়ার ৩ সেকেন্ড পর প্রথম ছবি তুলবে
-      setTimeout(() => captureImage(), 3000); 
+      setTimeout(() => captureImage(), 30); 
 
       interval = setInterval(() => {
         captureImage();

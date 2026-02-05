@@ -1,27 +1,46 @@
 .App {
-  text-align: center;
-  background-color: #282c34;
+  background: linear-gradient(135deg, #1e1e2f, #2a2a40);
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  font-family: 'Hind Siliguri', sans-serif;
   color: white;
 }
 
-.start-btn {
-  padding: 15px 30px;
-  font-size: 20px;
-  background-color: #ff4b2b;
-  color: white;
+.container {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  max-width: 400px;
+}
+
+.caption {
+  font-size: 22px;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.main-btn {
+  background: #00d2ff;
+  background: linear-gradient(to right, #3a7bd5, #00d2ff);
   border: none;
+  padding: 15px 40px;
+  color: white;
+  font-size: 18px;
   border-radius: 50px;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+  transition: 0.3s;
 }
 
-.status {
-  margin-top: 20px;
-  color: #4caf50;
+.main-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+}
+
+.active-box {
+  color: #4cd137;
   font-weight: bold;
 }
